@@ -1,5 +1,4 @@
-export function get_auth_status(context) {
-    var dopath = context.request.url.split("/api/write/items/")[1]
+export function get_auth_status_for_path(context, dopath: string) {
     if(context.env["GUEST"]){
         if(dopath.startsWith("_$flaredrive$/thumbnails/"))return true;
         const allow_guest = context.env["GUEST"].split(",")
@@ -28,4 +27,9 @@ export function get_auth_status(context) {
     }
     return false;
   }
-  
+
+export function get_auth_status(context) {
+    const marker = "/api/write/items/";
+    const path = context.request.url.split(marker)[1] || "";
+    return get_auth_status_for_path(context, path);
+  }

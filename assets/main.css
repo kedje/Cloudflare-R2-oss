@@ -34,6 +34,35 @@ ul {
   width: 33.33%;
 }
 
+.selection-bar {
+  position: sticky;
+  top: 56px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: white;
+  border-bottom: 1px solid #eee;
+}
+
+.selection-bar button {
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: whitesmoke;
+}
+
+.selection-bar .download-selected {
+  margin-left: auto;
+  color: white;
+  background: rgb(243, 128, 32);
+}
+
+.selection-bar .download-selected:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 @media only screen and (max-width: 768px) {
   .file-list > li {
     width: 100%;
@@ -78,6 +107,13 @@ input[type="search"] {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.file-select {
+  width: 18px;
+  height: 18px;
+  margin: 0 10px;
+  flex-shrink: 0;
 }
 
 .file-name,

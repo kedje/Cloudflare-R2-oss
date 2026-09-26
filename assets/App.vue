@@ -45,6 +45,19 @@
         />
       </div>
     </div>
+    <div v-if="filteredFiles.length" class="selection-bar">
+      <button @click="toggleSelectAll">
+        {{ allFilteredSelected ? "取消全选" : "全选当前列表" }}
+      </button>
+      <span>已选 {{ selectedKeys.length }} 个文件</span>
+      <button
+        class="download-selected"
+        :disabled="!selectedKeys.length"
+        @click="downloadSelected"
+      >
+        打包下载
+      </button>
+    </div>
     <ul class="file-list">
       <li v-if="cwd !== ''">
         <div
@@ -105,6 +118,14 @@
           "
         >
           <div class="file-item">
+            <input
+              class="file-select"
+              type="checkbox"
+              :checked="selectedKeys.includes(file.key)"
+              :aria-label="`选择 ${file.key.split('/').pop()}`"
+              @click.stop
+              @change="toggleFileSelection(file.key)"
+            />
             <MimeIcon
               :content-type="file.httpMetadata.contentType"
               :thumbnail="
@@ -230,6 +251,7 @@ export default {
     showUploadPopup: false,
     uploadProgress: null,
     uploadQueue: [],
+    selectedKeys: [],
   }),
 
   computed: {
@@ -250,12 +272,74 @@ export default {
       }
       return folders;
     },
+
+    allFilteredSelected() {
+      return this.filteredFiles.length > 0 &&
+        this.filteredFiles.every((file) => this.selectedKeys.includes(file.key));
+    },
+
+    selectedFiles() {
+      return this.files.filter((file) => this.selectedKeys.includes(file.key));
+    },
   },
 
   methods: {
     copyLink(link) {
       const url = new URL(link, window.location.origin);
       navigator.clipboard.writeText(url.toString());
+    },
+
+    toggleFileSelection(key) {
+      if (!this.selectedKeys.includes(key) && this.selectedKeys.length >= 500) {
+        window.alert("单次最多选择 500 个文件，请分批下载。");
+        return;
+      }
+      this.selectedKeys = this.selectedKeys.includes(key)
+        ? this.selectedKeys.filter((item) => item !== key)
+        : [...this.selectedKeys, key];
+    },
+
+    toggleSelectAll() {
+      if (this.allFilteredSelected) {
+        const visibleKeys = new Set(this.filteredFiles.map((file) => file.key));
+        this.selectedKeys = this.selectedKeys.filter((key) => !visibleKeys.has(key));
+      } else {
+        const nextSelection = [...new Set([
+          ...this.selectedKeys,
+          ...this.filteredFiles.map((file) => file.key),
+        ])];
+        if (nextSelection.length > 500) {
+          window.alert("单次最多选择 500 个文件，请使用搜索筛选后分批下载。");
+          return;
+        }
+        this.selectedKeys = nextSelection;
+      }
+    },
+
+    downloadSelected() {
+      if (!this.selectedKeys.length) return;
+      const totalSize = this.selectedFiles.reduce((total, file) => total + file.size, 0);
+      if (totalSize > 2 * 1024 * 1024 * 1024) {
+        window.alert("单次打包总大小不能超过 2 GiB，请分批下载。");
+        return;
+      }
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = "/api/download";
+      form.style.display = "none";
+      for (const [name, value] of [
+        ["prefix", this.cwd],
+        ["keys", JSON.stringify(this.selectedKeys)],
+      ]) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      }
+      document.body.appendChild(form);
+      form.submit();
+      form.remove();
     },
 
     async copyPaste(source, target) {
@@ -286,6 +370,7 @@ export default {
     fetchFiles() {
       this.files = [];
       this.folders = [];
+      this.selectedKeys = [];
       this.loading = true;
       fetch(`/api/children/${this.cwd}`)
         .then((res) => res.json())
