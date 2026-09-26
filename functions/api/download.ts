@@ -1,5 +1,4 @@
 import { parseBucketPath } from "@/utils/bucket";
-import { get_auth_status_for_path } from "@/utils/auth";
 import { streamZip } from "@/utils/zip";
 
 const MAX_FILES = 500;
@@ -47,12 +46,6 @@ export async function onRequestPost(context) {
     typeof key !== "string" || !key.startsWith(normalizedPrefix) || !safePath(key) ||
     key.endsWith("/_$folder$") || key.length > 1024
   )) return badRequest("文件列表包含无效路径");
-
-  for (const key of uniqueKeys) {
-    if (!get_auth_status_for_path(context, key)) {
-      return new Response("没有下载该目录的权限", { status: 403 });
-    }
-  }
 
   const entries = [];
   let totalSize = 0;
